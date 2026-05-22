@@ -1,0 +1,17 @@
+# Git and environments
+.git
+.gitignore
+.venv
+venv/
+env/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+
+# Project specific (Keep storage/mlflow because it has the baked model, but ignore massive datasets)
+datasets/
+logs/
+.dvc/cache/

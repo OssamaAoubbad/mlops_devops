@@ -1,0 +1,5 @@
+[core]
+    remote = local_minio
+['remote "local_minio"']
+    url = s3://mlops-datasets
+    endpointurl = http://localhost:9000

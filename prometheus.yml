@@ -1,0 +1,8 @@
+global:
+  scrape_interval: 5s
+
+scrape_configs:
+  - job_name: 'fastapi_ml_app'
+    static_configs:
+      # 'api' is the name of the service we will define in docker-compose
+      - targets: ['api:8000']

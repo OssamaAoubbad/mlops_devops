@@ -1,0 +1,19 @@
+FROM jenkins/jenkins:lts
+
+# Switch to root to install system packages
+USER root
+
+# Install Python, venv, and the Docker CLI
+RUN apt-get update && apt-get install -y \
+    python3 \
+    python3-venv \
+    python3-pip \
+    docker.io \
+    docker-compose \
+    && rm -rf /var/lib/apt/lists/*
+
+# Grant the jenkins user permission to run docker commands
+RUN usermod -aG docker jenkins
+
+# Switch back to the standard jenkins user for security
+USER jenkins

@@ -1,0 +1,105 @@
+services:
+  # ==========================================
+  # 1. MinIO: Local S3 Alternative for DVC & MLflow
+  # ==========================================
+  minio:
+    image: minio/minio:latest
+    container_name: mlops_minio
+    ports:
+      - "9000:9000"  # API port
+      - "9001:9001"  # Web Console port
+    environment:
+      - MINIO_ROOT_USER=${MINIO_ROOT_USER:-admin}
+      - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD:-123456789}
+    command: server /data --console-address ":9001"
+    volumes:
+      - minio_data:/data
+    networks:
+      - mlops_net
+
+  # ==========================================
+  # 2. Prometheus: Metrics Time-Series Database
+  # ==========================================
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: mlops_prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    networks:
+      - mlops_net
+
+  # ==========================================
+  # 3. Grafana: Dashboard Visualization
+  # ==========================================
+  grafana:
+    image: grafana/grafana:latest
+    container_name: mlops_grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - grafana_data:/var/lib/grafana
+    depends_on:
+      - prometheus
+    networks:
+      - mlops_net
+
+  # ==========================================
+  # 4. FastAPI & Ray Serve: Your Production API
+  # ==========================================
+  api:
+    build: .
+    container_name: mlops_api
+    ports:
+      - "8000:8000"
+    environment:
+      # Force Docker environment settings
+      - ENVIRONMENT=docker
+      - EFS_DIR=/app/storage
+      # Spoof AWS credentials so DVC and MLflow can talk to MinIO securely
+      - AWS_ACCESS_KEY_ID=${MINIO_ROOT_USER:-admin}
+      - AWS_SECRET_ACCESS_KEY=${MINIO_ROOT_PASSWORD:-123456789}
+      - AWS_DEFAULT_REGION=us-east-1
+      - MLFLOW_S3_ENDPOINT_URL=http://minio:9000
+      # Pass the RUN_ID to the entrypoint script
+      - RUN_ID=${RUN_ID:-default_run_id}
+    # volumes:
+    #   - app_storage:/app/storage
+    depends_on:
+      - minio
+    networks:
+      - mlops_net
+
+  jenkins:
+    build:
+      context: .
+      dockerfile: Dockerfile.jenkins
+    container_name: jenkins_mlops
+    user: root # Required to access the host's Docker socket
+    ports:
+      - "8090:8080"
+      - "50000:50000"
+    volumes:
+      - jenkins_data:/var/jenkins_home
+      # Mount the Docker socket so Jenkins can build your API container
+      - /var/run/docker.sock:/var/run/docker.sock
+    restart: unless-stopped
+    networks:
+      - mlops_net
+
+# Define persistent volumes so data survives container restarts
+volumes:
+  minio_data:
+  prometheus_data:
+  grafana_data:
+  app_storage:
+  jenkins_data:
+
+# Define a custom bridge network so containers can talk to each other by name
+networks:
+  mlops_net:
+    driver: bridge
