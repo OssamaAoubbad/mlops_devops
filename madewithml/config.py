@@ -24,6 +24,8 @@ class Settings(BaseSettings):
     # Infrastructure Endpoints (Overridable by Jenkins)
     minio_endpoint: str = "http://localhost:9000"
     mlflow_tracking_uri: str = ""  # Leave empty locally to trigger the Windows fix below
+    evently_api_key: str = ""
+    evently_endpoint: str = "https://api.evently.ai"
 
     class Config:
         env_file = ".env"

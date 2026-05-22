@@ -1,33 +1,40 @@
-# Use the official, lightweight Python 3.10 image
+# Python base image
 FROM python:3.10-slim
 
-# Prevent Python from writing .pyc files to disk and ensure console output is not buffered
+# Prevent Python caching & buffering
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 
-# Set the working directory inside the container
+# Working directory
 WORKDIR /app
 
-# Install system dependencies (Git is strictly required for DVC)
+# System dependencies
 RUN apt-get update && apt-get install -y \
     git \
     curl \
+    dos2unix \
+    bash \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy the requirements file first to leverage Docker layer caching
+# Copy dependencies first (cache optimization)
 COPY requirements.txt .
 
-# Install dependencies, forcing the much smaller CPU-only version of PyTorch
-RUN pip install --no-cache-dir -r requirements.txt --extra-index-url https://download.pytorch.org/whl/cpu
+# Install Python dependencies
+RUN pip install --no-cache-dir -r requirements.txt \
+    --extra-index-url https://download.pytorch.org/whl/cpu
 
-# Copy the entire project code into the container
+# Copy project
 COPY . .
 
-# Make the entrypoint script executable
-RUN chmod +x entrypoint.sh
+# FIX ENTRYPOINT (VERY IMPORTANT for Windows users)
+RUN dos2unix entrypoint.sh || true && \
+    chmod +x entrypoint.sh
 
-# Expose the port FastAPI will run on
+# Ensure script exists (debug safety)
+RUN ls -la /app
+
+# Expose FastAPI port
 EXPOSE 8000
 
-# Tell Docker to run the entrypoint script when the container boots
-CMD ["./entrypoint.sh"]
+# Use bash explicitly (more stable than ./entrypoint.sh)
+CMD ["bash", "./entrypoint.sh"]

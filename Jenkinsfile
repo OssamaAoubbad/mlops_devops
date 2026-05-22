@@ -158,15 +158,17 @@ pipeline {
         }
     }
 
-    post {
-        success {
-            echo "✅ CI/CD Pipeline completed! New model ${RUN_ID} is live."
-        }
-        failure {
-            echo "❌ Pipeline failed. Deploy aborted to protect production."
-        }
-        always {
+   post {
+    success {
+        echo "✅ CI/CD Pipeline completed! New model ${RUN_ID} is live."
+    }
+    failure {
+        echo "❌ Pipeline failed. Deploy aborted to protect production."
+    }
+    always {
+        script {
             cleanWs()
         }
     }
+}
 }
